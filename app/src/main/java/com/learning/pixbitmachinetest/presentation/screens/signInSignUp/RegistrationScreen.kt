@@ -43,7 +43,11 @@ import com.learning.pixbitmachinetest.presentation.theme.textFieldBackground
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RegistrationScreen(modifier: Modifier = Modifier, onBackClick: () -> Unit) {
+fun RegistrationScreen(
+    modifier: Modifier = Modifier,
+    onBackClick: () -> Unit,
+    onRegistrationSuccess: () -> Unit
+) {
 
     val viewModel: SignInSIgnUpViewModel = hiltViewModel()
     var name by remember { mutableStateOf("") }
@@ -84,9 +88,11 @@ fun RegistrationScreen(modifier: Modifier = Modifier, onBackClick: () -> Unit) {
             )
         }) { paddingValues ->
 
-        Box(modifier = Modifier
-            .fillMaxSize()
-            .padding(paddingValues)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
 
             Column(
                 modifier = Modifier
@@ -109,9 +115,9 @@ fun RegistrationScreen(modifier: Modifier = Modifier, onBackClick: () -> Unit) {
                     singleLine = true,
                     isError = !isNameValid,
                     supportingText = {
-                                     if (!isNameValid) {
-                                         Text(text = "Name should contain only characters")
-                                     }
+                        if (!isNameValid) {
+                            Text(text = "Name should contain only characters")
+                        }
                     },
                     colors = OutlinedTextFieldDefaults.colors(
                         unfocusedContainerColor = textFieldBackground,
@@ -137,9 +143,9 @@ fun RegistrationScreen(modifier: Modifier = Modifier, onBackClick: () -> Unit) {
                     singleLine = true,
                     isError = !isEmailValid,
                     supportingText = {
-                                     if (!isEmailValid) {
-                                         Text(text = "Invalid email address")
-                                     }
+                        if (!isEmailValid) {
+                            Text(text = "Invalid email address")
+                        }
                     },
                     colors = OutlinedTextFieldDefaults.colors(
                         unfocusedContainerColor = textFieldBackground,
@@ -175,9 +181,9 @@ fun RegistrationScreen(modifier: Modifier = Modifier, onBackClick: () -> Unit) {
                     visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     isError = !isPasswordValid,
                     supportingText = {
-                                     if (!isPasswordValid) {
-                                         Text(text = "Password should be at least 5 characters long and contain uppercase, lowercase, number, and special character (@, !, ?, _)")
-                                     }
+                        if (!isPasswordValid) {
+                            Text(text = "Password should be at least 5 characters long and contain uppercase, lowercase, number, and special character (@, !, ?, _)")
+                        }
                     },
                     colors = OutlinedTextFieldDefaults.colors(
                         unfocusedContainerColor = textFieldBackground,
@@ -213,9 +219,9 @@ fun RegistrationScreen(modifier: Modifier = Modifier, onBackClick: () -> Unit) {
                     visualTransformation = if (isConfirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     isError = !isConfirmPasswordValid,
                     supportingText = {
-                                     if (!isConfirmPasswordValid) {
-                                         Text(text = "Passwords do not match")
-                                     }
+                        if (!isConfirmPasswordValid) {
+                            Text(text = "Passwords do not match")
+                        }
                     },
                     colors = OutlinedTextFieldDefaults.colors(
                         unfocusedContainerColor = textFieldBackground,
@@ -230,6 +236,7 @@ fun RegistrationScreen(modifier: Modifier = Modifier, onBackClick: () -> Unit) {
                 Button(
                     onClick = {
                         viewModel.registerUser(name, email, password, confirmPassword)
+                        onRegistrationSuccess()
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -251,6 +258,6 @@ fun RegistrationScreen(modifier: Modifier = Modifier, onBackClick: () -> Unit) {
 @Preview(showSystemUi = true)
 fun RegistrationScreenPreview() {
     PixbitMachineTestTheme {
-        RegistrationScreen(onBackClick = {})
+        RegistrationScreen(onBackClick = {}, onRegistrationSuccess = {})
     }
 }
