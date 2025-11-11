@@ -1,5 +1,6 @@
 package com.learning.pixbitmachinetest.presentation.screens.signInSignUp
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -7,13 +8,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -25,12 +29,16 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -39,7 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.learning.pixbitmachinetest.common.utils.Validator
 import com.learning.pixbitmachinetest.presentation.theme.PixbitMachineTestTheme
-import com.learning.pixbitmachinetest.presentation.theme.textFieldBackground
+import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,19 +58,37 @@ fun RegistrationScreen(
 ) {
 
     val viewModel: SignInSIgnUpViewModel = hiltViewModel()
+    val context = LocalContext.current
+
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
+
+    var nameError by remember { mutableStateOf<String?>(null) }
+    var emailError by remember { mutableStateOf<String?>(null) }
+    var passwordError by remember { mutableStateOf<String?>(null) }
+    var confirmPasswordError by remember { mutableStateOf<String?>(null) }
+
     var isPasswordVisible by remember { mutableStateOf(false) }
     var isConfirmPasswordVisible by remember { mutableStateOf(false) }
 
-    val isNameValid = Validator.isNameValid(name)
-    val isEmailValid = Validator.isEmailValid(email)
-    val isPasswordValid = Validator.isPasswordValid(password)
-    val isConfirmPasswordValid = password == confirmPassword
+    val uiState by viewModel.uiState.collectAsState()
 
-    val isFormValid = isNameValid && isEmailValid && isPasswordValid && isConfirmPasswordValid
+    LaunchedEffect(Unit) {
+        viewModel.registrationEvent.collectLatest {
+            when (it) {
+                is RegistrationEvent.Success -> {
+                    Toast.makeText(context, "Registration successful", Toast.LENGTH_SHORT).show()
+                    onRegistrationSuccess()
+                }
+
+                is RegistrationEvent.Error -> {
+                    Toast.makeText(context, it.message, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -98,6 +124,7 @@ fun RegistrationScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(24.dp)
+                    .verticalScroll(rememberScrollState())
             ) {
                 Text(text = "Name", fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onBackground)
                 Spacer(modifier = Modifier.height(5.dp))
@@ -106,6 +133,7 @@ fun RegistrationScreen(
                     value = name,
                     onValueChange = {
                         name = it
+                        nameError = null
                     },
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = {
@@ -113,15 +141,15 @@ fun RegistrationScreen(
                     },
                     shape = RoundedCornerShape(10.dp),
                     singleLine = true,
-                    isError = !isNameValid,
+                    isError = nameError != null,
                     supportingText = {
-                        if (!isNameValid) {
-                            Text(text = "Name should contain only characters")
+                        if (nameError != null) {
+                            Text(text = nameError!!)
                         }
                     },
                     colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedContainerColor = textFieldBackground,
-                        focusedContainerColor = textFieldBackground,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
                         unfocusedBorderColor = Color.Transparent
                     )
@@ -134,6 +162,7 @@ fun RegistrationScreen(
                     value = email,
                     onValueChange = {
                         email = it
+                        emailError = null
                     },
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = {
@@ -141,15 +170,15 @@ fun RegistrationScreen(
                     },
                     shape = RoundedCornerShape(10.dp),
                     singleLine = true,
-                    isError = !isEmailValid,
+                    isError = emailError != null,
                     supportingText = {
-                        if (!isEmailValid) {
-                            Text(text = "Invalid email address")
+                        if (emailError != null) {
+                            Text(text = emailError!!)
                         }
                     },
                     colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedContainerColor = textFieldBackground,
-                        focusedContainerColor = textFieldBackground,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
                         unfocusedBorderColor = Color.Transparent
                     )
@@ -163,6 +192,7 @@ fun RegistrationScreen(
                     value = password,
                     onValueChange = {
                         password = it
+                        passwordError = null
                     },
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = {
@@ -179,15 +209,15 @@ fun RegistrationScreen(
                     shape = RoundedCornerShape(10.dp),
                     singleLine = true,
                     visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    isError = !isPasswordValid,
+                    isError = passwordError != null,
                     supportingText = {
-                        if (!isPasswordValid) {
-                            Text(text = "Password should be at least 5 characters long and contain uppercase, lowercase, number, and special character (@, !, ?, _)")
+                        if (passwordError != null) {
+                            Text(text = passwordError!!)
                         }
                     },
                     colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedContainerColor = textFieldBackground,
-                        focusedContainerColor = textFieldBackground,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
                         unfocusedBorderColor = Color.Transparent
                     )
@@ -201,6 +231,7 @@ fun RegistrationScreen(
                     value = confirmPassword,
                     onValueChange = {
                         confirmPassword = it
+                        confirmPasswordError = null
                     },
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = {
@@ -217,15 +248,15 @@ fun RegistrationScreen(
                     shape = RoundedCornerShape(10.dp),
                     singleLine = true,
                     visualTransformation = if (isConfirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    isError = !isConfirmPasswordValid,
+                    isError = confirmPasswordError != null,
                     supportingText = {
-                        if (!isConfirmPasswordValid) {
-                            Text(text = "Passwords do not match")
+                        if (confirmPasswordError != null) {
+                            Text(text = confirmPasswordError!!)
                         }
                     },
                     colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedContainerColor = textFieldBackground,
-                        focusedContainerColor = textFieldBackground,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
                         unfocusedBorderColor = Color.Transparent
                     )
@@ -235,19 +266,44 @@ fun RegistrationScreen(
 
                 Button(
                     onClick = {
-                        viewModel.registerUser(name, email, password, confirmPassword)
-                        onRegistrationSuccess()
+                        var isFormValid = true
+                        if (!Validator.isNameValid(name)) {
+                            nameError = "Name should contain only characters"
+                            isFormValid = false
+                        }
+                        if (!Validator.isEmailValid(email)) {
+                            emailError = "Invalid email address"
+                            isFormValid = false
+                        }
+                        if (!Validator.isPasswordValid(password)) {
+                            passwordError = "Password should be at least 5 characters long and contain uppercase, lowercase, number, and special character (@, !, ?, _)"
+                            isFormValid = false
+                        }
+                        if (password != confirmPassword) {
+                            confirmPasswordError = "Passwords do not match"
+                            isFormValid = false
+                        }
+
+                        if (isFormValid) {
+                            viewModel.registerUser(name, email, password, confirmPassword)
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),
                     shape = RoundedCornerShape(10.dp),
-                    enabled = isFormValid,
+                    enabled = !uiState.isLoading,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.secondary
                     )
                 ) {
                     Text("Register")
+                }
+            }
+
+            if (uiState.isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
                 }
             }
         }

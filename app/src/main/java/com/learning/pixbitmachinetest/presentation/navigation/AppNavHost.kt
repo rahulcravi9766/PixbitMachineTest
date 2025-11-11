@@ -10,21 +10,15 @@ import com.learning.pixbitmachinetest.presentation.screens.home.HomeScreen
 import com.learning.pixbitmachinetest.presentation.screens.signInSignUp.LoginScreen
 import com.learning.pixbitmachinetest.presentation.screens.signInSignUp.RegistrationScreen
 
-sealed class Screen(val route: String) {
-
-    data object Login : Screen("login")
-    data object Registration : Screen("registration")
-    data object Home : Screen("home")
-    data object AddEmployee : Screen("add_employee")
-}
-
-
 @Composable
-fun AppNavHost(navController: NavHostController = rememberNavController()) {
+fun AppNavHost(
+    navController: NavHostController = rememberNavController(),
+    startDestination: String
+) {
 
     NavHost(
         navController = navController,
-        startDestination = Screen.Login.route
+        startDestination = startDestination
     ) {
 
         composable(Screen.Login.route) {
@@ -53,14 +47,14 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
 
         composable(Screen.Home.route) {
             HomeScreen(navigateToAddEmployee = {
-            navController.navigate(Screen.AddEmployee.route)
+                navController.navigate(Screen.AddEmployee.route)
             }, navigateToProfile = {
 
             })
         }
 
         composable(Screen.AddEmployee.route) {
-            AddEmployeeScreen{
+            AddEmployeeScreen {
                 navController.popBackStack()
             }
         }

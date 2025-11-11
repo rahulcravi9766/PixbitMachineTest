@@ -32,10 +32,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.learning.pixbitmachinetest.presentation.theme.background
-import com.learning.pixbitmachinetest.presentation.theme.onPrimary
-import com.learning.pixbitmachinetest.presentation.theme.primary
-import com.learning.pixbitmachinetest.presentation.theme.surface
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,13 +44,13 @@ fun HomeScreen(navigateToAddEmployee: () -> Unit, navigateToProfile: () -> Unit)
         Employee("Mohan", "123-456-7230", Icons.Default.Person),
     )
     Scaffold(
-        containerColor = background,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = { Text("Employees") },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = surface,
-                    titleContentColor = primary
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.primary
                 )
             )
         },
@@ -62,8 +58,8 @@ fun HomeScreen(navigateToAddEmployee: () -> Unit, navigateToProfile: () -> Unit)
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { navigateToAddEmployee() },
-                containerColor = primary,
-                contentColor = onPrimary,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = CircleShape
             ) {
                 Icon(Icons.Filled.Add, "Add Employee")
@@ -101,13 +97,13 @@ fun EmployeeListItem(employee: Employee, navigateToProfile: () -> Unit) {
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(surface),
+                .background(MaterialTheme.colorScheme.surface),
             contentScale = ContentScale.Crop
         )
         Spacer(modifier = Modifier.width(16.dp))
 
         Column {
-            Text(text = employee.name, style = MaterialTheme.typography.bodyLarge, color = primary)
+            Text(text = employee.name, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
             Text(text = employee.phone, style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
         }
     }

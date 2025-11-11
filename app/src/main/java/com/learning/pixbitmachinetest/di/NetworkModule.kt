@@ -1,6 +1,7 @@
 package com.learning.pixbitmachinetest.di
 
-import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import com.learning.pixbitmachinetest.data.remote.ApiService
 import com.learning.pixbitmachinetest.data.remote.AuthInterceptor
 import com.squareup.moshi.Moshi
@@ -8,7 +9,6 @@ import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -20,7 +20,7 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    private const val BASE_URL = "https://test.pixbit.in/api/"
+    private const val BASE_URL = "https://machine-test-cn1pkjyu.on-forge.com/api/"
 
     @Provides
     @Singleton
@@ -60,7 +60,7 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideAuthInterceptor(@ApplicationContext context: Context): AuthInterceptor {
-        return AuthInterceptor(context)
+    fun provideAuthInterceptor(dataStore: DataStore<Preferences>): AuthInterceptor {
+        return AuthInterceptor(dataStore)
     }
 }
