@@ -43,7 +43,7 @@ import com.learning.pixbitmachinetest.presentation.theme.PixbitMachineTestTheme
 import com.learning.pixbitmachinetest.presentation.theme.textFieldBackground
 
 @Composable
-fun LoginScreen(onRegister: () -> Unit) {
+fun LoginScreen(onRegister: () -> Unit, onLoginSuccess: () -> Unit) {
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -147,7 +147,7 @@ fun LoginScreen(onRegister: () -> Unit) {
                         Spacer(modifier = Modifier.height(20.dp))
 
                         Button(
-                            onClick = {},
+                            onClick = { onLoginSuccess() },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(50.dp),
@@ -176,6 +176,6 @@ fun LoginScreen(onRegister: () -> Unit) {
 @Preview(showSystemUi = true)
 fun LoginScreenPreview() {
     PixbitMachineTestTheme {
-        LoginScreen(onRegister = {})
+        LoginScreen(onRegister = {}, onLoginSuccess = {})
     }
 }
