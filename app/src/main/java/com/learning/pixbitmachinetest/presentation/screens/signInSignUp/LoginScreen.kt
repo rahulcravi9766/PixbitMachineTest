@@ -43,7 +43,7 @@ import com.learning.pixbitmachinetest.presentation.theme.PixbitMachineTestTheme
 import com.learning.pixbitmachinetest.presentation.theme.textFieldBackground
 
 @Composable
-fun LoginScreen() {
+fun LoginScreen(onRegister: () -> Unit) {
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -56,7 +56,7 @@ fun LoginScreen() {
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp)
             ) {
-                Spacer(modifier = Modifier.height(60.dp))
+                Spacer(modifier = Modifier.height(100.dp))
                 Text(
                     text = "Welcome Back",
                     fontSize = 32.sp,
@@ -161,7 +161,9 @@ fun LoginScreen() {
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        Text("Register Now", color = MaterialTheme.colorScheme.primary, modifier = Modifier.clickable { })
+                        Text("Register Now", color = MaterialTheme.colorScheme.primary, modifier = Modifier.clickable {
+                            onRegister()
+                        })
                     }
                 }
             }
@@ -174,6 +176,6 @@ fun LoginScreen() {
 @Preview(showSystemUi = true)
 fun LoginScreenPreview() {
     PixbitMachineTestTheme {
-        LoginScreen()
+        LoginScreen(onRegister = {})
     }
 }

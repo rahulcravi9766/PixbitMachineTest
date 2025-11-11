@@ -36,6 +36,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.learning.pixbitmachinetest.common.utils.Validator
 import com.learning.pixbitmachinetest.presentation.theme.PixbitMachineTestTheme
 import com.learning.pixbitmachinetest.presentation.theme.textFieldBackground
 
@@ -43,12 +45,20 @@ import com.learning.pixbitmachinetest.presentation.theme.textFieldBackground
 @Composable
 fun RegistrationScreen(modifier: Modifier = Modifier, onBackClick: () -> Unit) {
 
+    val viewModel: SignInSIgnUpViewModel = hiltViewModel()
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
     var isConfirmPasswordVisible by remember { mutableStateOf(false) }
+
+    val isNameValid = Validator.isNameValid(name)
+    val isEmailValid = Validator.isEmailValid(email)
+    val isPasswordValid = Validator.isPasswordValid(password)
+    val isConfirmPasswordValid = password == confirmPassword
+
+    val isFormValid = isNameValid && isEmailValid && isPasswordValid && isConfirmPasswordValid
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -97,6 +107,12 @@ fun RegistrationScreen(modifier: Modifier = Modifier, onBackClick: () -> Unit) {
                     },
                     shape = RoundedCornerShape(10.dp),
                     singleLine = true,
+                    isError = !isNameValid,
+                    supportingText = {
+                                     if (!isNameValid) {
+                                         Text(text = "Name should contain only characters")
+                                     }
+                    },
                     colors = OutlinedTextFieldDefaults.colors(
                         unfocusedContainerColor = textFieldBackground,
                         focusedContainerColor = textFieldBackground,
@@ -119,6 +135,12 @@ fun RegistrationScreen(modifier: Modifier = Modifier, onBackClick: () -> Unit) {
                     },
                     shape = RoundedCornerShape(10.dp),
                     singleLine = true,
+                    isError = !isEmailValid,
+                    supportingText = {
+                                     if (!isEmailValid) {
+                                         Text(text = "Invalid email address")
+                                     }
+                    },
                     colors = OutlinedTextFieldDefaults.colors(
                         unfocusedContainerColor = textFieldBackground,
                         focusedContainerColor = textFieldBackground,
@@ -151,6 +173,12 @@ fun RegistrationScreen(modifier: Modifier = Modifier, onBackClick: () -> Unit) {
                     shape = RoundedCornerShape(10.dp),
                     singleLine = true,
                     visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    isError = !isPasswordValid,
+                    supportingText = {
+                                     if (!isPasswordValid) {
+                                         Text(text = "Password should be at least 5 characters long and contain uppercase, lowercase, number, and special character (@, !, ?, _)")
+                                     }
+                    },
                     colors = OutlinedTextFieldDefaults.colors(
                         unfocusedContainerColor = textFieldBackground,
                         focusedContainerColor = textFieldBackground,
@@ -183,6 +211,12 @@ fun RegistrationScreen(modifier: Modifier = Modifier, onBackClick: () -> Unit) {
                     shape = RoundedCornerShape(10.dp),
                     singleLine = true,
                     visualTransformation = if (isConfirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    isError = !isConfirmPasswordValid,
+                    supportingText = {
+                                     if (!isConfirmPasswordValid) {
+                                         Text(text = "Passwords do not match")
+                                     }
+                    },
                     colors = OutlinedTextFieldDefaults.colors(
                         unfocusedContainerColor = textFieldBackground,
                         focusedContainerColor = textFieldBackground,
@@ -194,11 +228,14 @@ fun RegistrationScreen(modifier: Modifier = Modifier, onBackClick: () -> Unit) {
                 Spacer(modifier = Modifier.height(20.dp))
 
                 Button(
-                    onClick = {},
+                    onClick = {
+                        viewModel.registerUser(name, email, password, confirmPassword)
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),
                     shape = RoundedCornerShape(10.dp),
+                    enabled = isFormValid,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.secondary
                     )

@@ -1,6 +1,7 @@
 package com.learning.pixbitmachinetest
 
 import android.app.Application
+import dagger.hilt.android.HiltAndroidApp
 
-class MyApp: Application() {
-}
+@HiltAndroidApp
+class MyApp: Application()
