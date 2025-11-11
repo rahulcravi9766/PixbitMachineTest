@@ -4,7 +4,7 @@ object Validator {
 
 
     fun isNameValid(name: String): Boolean {
-        return name.matches(Regex("^[a-zA-Z\\s]*$"))
+        return name.matches(Regex("^[a-zA-Z\\s]*$")) && name.isNotEmpty()
     }
 
     fun isEmailValid(email: String): Boolean {

@@ -1,5 +1,6 @@
 package com.learning.pixbitmachinetest.presentation.screens.signInSignUp
 
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,6 +19,7 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -26,6 +28,8 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,21 +37,45 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.learning.pixbitmachinetest.presentation.theme.PixbitMachineTestTheme
-import com.learning.pixbitmachinetest.presentation.theme.textFieldBackground
+import kotlinx.coroutines.flow.collectLatest
 
 @Composable
 fun LoginScreen(onRegister: () -> Unit, onLoginSuccess: () -> Unit) {
 
+    val viewModel: SignInSIgnUpViewModel = hiltViewModel()
+    val context = LocalContext.current
+
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
+
+    val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.loginEvent.collectLatest {
+            when (it) {
+                is LoginEvent.Success -> {
+                    Toast.makeText(context, "Login successful", Toast.LENGTH_SHORT).show()
+                    onLoginSuccess()
+                }
+
+                is LoginEvent.Error -> {
+                    Toast.makeText(context, it.message, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+
 
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -105,8 +133,8 @@ fun LoginScreen(onRegister: () -> Unit, onLoginSuccess: () -> Unit) {
                             shape = RoundedCornerShape(10.dp),
                             singleLine = true,
                             colors = OutlinedTextFieldDefaults.colors(
-                                unfocusedContainerColor = textFieldBackground,
-                                focusedContainerColor = textFieldBackground,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.background,
+                                focusedContainerColor = MaterialTheme.colorScheme.background,
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
                                 unfocusedBorderColor = Color.Transparent
                             )
@@ -138,8 +166,8 @@ fun LoginScreen(onRegister: () -> Unit, onLoginSuccess: () -> Unit) {
                             singleLine = true,
                             visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                             colors = OutlinedTextFieldDefaults.colors(
-                                unfocusedContainerColor = textFieldBackground,
-                                focusedContainerColor = textFieldBackground,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.background,
+                                focusedContainerColor = MaterialTheme.colorScheme.background,
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
                                 unfocusedBorderColor = Color.Transparent
                             )
@@ -147,16 +175,21 @@ fun LoginScreen(onRegister: () -> Unit, onLoginSuccess: () -> Unit) {
                         Spacer(modifier = Modifier.height(20.dp))
 
                         Button(
-                            onClick = { onLoginSuccess() },
+                            onClick = { viewModel.loginUser(email, password) },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(50.dp),
                             shape = RoundedCornerShape(10.dp),
+                            enabled = !uiState.isLoading,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.secondary
                             )
                         ) {
-                            Text("Sign in", fontSize = 16.sp)
+                            if (uiState.isLoading) {
+                                CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary)
+                            } else {
+                                Text("Sign in", fontSize = 16.sp)
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))

@@ -1,10 +1,8 @@
 package com.learning.pixbitmachinetest.data.remote.repository
 
-import android.util.Log
+import com.learning.pixbitmachinetest.data.model.RegisterResponse
 import com.learning.pixbitmachinetest.data.remote.ApiService
-import com.learning.pixbitmachinetest.data.remote.model.RegistrationResponse
-import com.learning.pixbitmachinetest.utils.Resource
-import okhttp3.ResponseBody
+import retrofit2.Response
 import javax.inject.Inject
 
 
@@ -15,9 +13,18 @@ class Repository @Inject constructor(val api: ApiService) {
         email: String,
         password: String,
         confirmPassword: String
-    ): RegistrationResponse? {
+    ): Response<RegisterResponse> {
 
         return api.registerUser(name, email, password, confirmPassword)
+
+    }
+
+    suspend fun loginUser(
+        email: String,
+        password: String
+    ): Response<RegisterResponse> {
+
+        return api.loginUser(email, password)
 
     }
 }
