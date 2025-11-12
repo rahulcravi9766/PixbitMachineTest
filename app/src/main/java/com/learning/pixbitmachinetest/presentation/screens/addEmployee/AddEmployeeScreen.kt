@@ -9,6 +9,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,6 +49,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Slider
@@ -59,8 +61,8 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -83,8 +85,9 @@ import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.learning.pixbitmachinetest.common.utils.Validator
 import com.learning.pixbitmachinetest.data.model.Designation
-import com.learning.pixbitmachinetest.model.MonthlyPayment
-import com.learning.pixbitmachinetest.presentation.DesignationState
+import com.learning.pixbitmachinetest.presentation.model.MonthlyPayment
+import com.learning.pixbitmachinetest.presentation.state.DesignationState
+import com.learning.pixbitmachinetest.presentation.state.SaveEmployeeState
 import java.io.File
 import java.io.FileOutputStream
 import java.text.NumberFormat
@@ -97,38 +100,46 @@ import java.util.TimeZone
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEmployeeScreen(
-    onBackPress: () -> Unit
+    onBackPress: () -> Unit,
+    onSaveSuccess: () -> Unit
 ) {
 
     val viewModel: AddEmployeeViewModel = hiltViewModel()
     var currentStep by remember { mutableIntStateOf(1) }
 
-    // Step 1 fields
     var firstName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
     var dob by remember { mutableStateOf("") }
     var designation by remember { mutableStateOf("") }
     var gender by remember { mutableStateOf("") }
-    var profilePicUri by remember { mutableStateOf<Uri?>(null) } // New state for profile picture
+    var profilePicUri by remember { mutableStateOf<Uri?>(null) }
+    var resumeUri by remember { mutableStateOf<Uri?>(null) }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        profilePicUri = uri
-    }
+        contract = ActivityResultContracts.GetContent(),
+        onResult = { uri: Uri? -> profilePicUri = uri }
+    )
 
-    // Step 2 fields
+    val resumePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+        onResult = { uri: Uri? -> resumeUri = uri }
+    )
+
     var mobileNumber by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
 
-    // Step 3 fields
     var contractPeriod by remember { mutableStateOf("3 Months") }
     var totalSalary by remember { mutableFloatStateOf(30000f) }
 
-    var step2ButtonClicked by remember { mutableStateOf(false) }
-
     val designationState by viewModel.designationState.collectAsState()
+    val saveEmployeeState by viewModel.saveEmployeeState.collectAsState()
+
+    LaunchedEffect(saveEmployeeState) {
+        if (saveEmployeeState is SaveEmployeeState.Success) {
+            onSaveSuccess()
+        }
+    }
 
     val designations = remember(designationState) {
         if (designationState is DesignationState.Success) {
@@ -149,6 +160,7 @@ fun AddEmployeeScreen(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = { Text("Add an employee") },
@@ -160,7 +172,7 @@ fun AddEmployeeScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    containerColor = MaterialTheme.colorScheme.surface,
                     titleContentColor = MaterialTheme.colorScheme.primary,
                 )
             )
@@ -178,7 +190,7 @@ fun AddEmployeeScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Row(
                     modifier = Modifier
@@ -203,23 +215,26 @@ fun AddEmployeeScreen(
             when (currentStep) {
                 1 -> {
                     BasicDetailsStep(
-                        firstName,
-                        lastName,
-                        dob,
-                        designation,
-                        gender,
+                        firstName = firstName,
+                        lastName = lastName,
+                        dob = dob,
+                        designation = designation,
+                        gender = gender,
                         designationList = designationNames,
                         onFirstNameChange = { firstName = it },
                         onLastNameChange = { lastName = it },
                         onDobChange = { dob = it },
                         onDesignationChange = { designation = it },
                         onGenderChange = { gender = it },
-                        profilePicUri = profilePicUri, // Pass the URI
-                        onEditProfilePicClick = { imagePickerLauncher.launch("image/*") } // Pass the launcher action
+                        profilePicUri = profilePicUri,
+                        onEditProfilePicClick = { imagePickerLauncher.launch("image/*") },
+                        resumeUri = resumeUri,
+                        onUploadResumeClick = { resumePickerLauncher.launch("*/*") }
                     )
                 }
 
                 2 -> {
+                    var step2ButtonClicked by remember { mutableStateOf(false) }
                     ContactDetailsStep(
                         mobileNumber,
                         email,
@@ -240,9 +255,8 @@ fun AddEmployeeScreen(
                         onTotalSalaryChange = { totalSalary = it },
                         onSave = { monthlyPayments ->
                             val designationId = designations.find { it.name == designation }?.id
-                            val profilePicFile = profilePicUri?.let { uri ->
-                                uriToFile(context, uri)
-                            }
+                            val profilePicFile = profilePicUri?.let { uri -> uriToFile(context, uri) }
+                            val resumeFile = resumeUri?.let { uri -> uriToFile(context, uri) }
                             viewModel.saveEmployee(
                                 firstName = firstName,
                                 lastName = lastName,
@@ -255,7 +269,7 @@ fun AddEmployeeScreen(
                                 contractPeriod = contractPeriod,
                                 totalSalary = totalSalary.toString(),
                                 profilePic = profilePicFile,
-                                resume = null,
+                                resume = resumeFile,
                                 monthlyPayments = monthlyPayments
                             )
                         }
@@ -274,7 +288,6 @@ fun AddEmployeeScreen(
                                 if (isStep1Valid) currentStep++
                             }
                             2 -> {
-                                step2ButtonClicked = true
                                 if (isStep2Valid) currentStep++
                             }
                         }
@@ -282,9 +295,12 @@ fun AddEmployeeScreen(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = when(currentStep){
                         1 -> isStep1Valid
-                        2 -> true
+                        2 -> isStep2Valid
                         else -> false
-                    }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondary
+                    )
                 ) {
                     Text("Next")
                 }
@@ -301,14 +317,16 @@ fun BasicDetailsStep(
     dob: String,
     designation: String,
     gender: String,
-    designationList: List<String>, 
+    designationList: List<String>,
     onFirstNameChange: (String) -> Unit,
     onLastNameChange: (String) -> Unit,
     onDobChange: (String) -> Unit,
     onDesignationChange: (String) -> Unit,
     onGenderChange: (String) -> Unit,
     profilePicUri: Uri?,
-    onEditProfilePicClick: () -> Unit
+    onEditProfilePicClick: () -> Unit,
+    resumeUri: Uri?,
+    onUploadResumeClick: () -> Unit
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
 
@@ -316,6 +334,8 @@ fun BasicDetailsStep(
 
     val genders = listOf("Male", "Female", "Other")
     var genderExpanded by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
 
@@ -351,22 +371,44 @@ fun BasicDetailsStep(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        OutlinedTextField(value = firstName, onValueChange = onFirstNameChange, label = { Text("First Name") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(
+            value = firstName,
+            onValueChange = onFirstNameChange,
+            label = { Text("First Name") },
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color.LightGray,
+                focusedBorderColor = MaterialTheme.colorScheme.primary
+            )
+        )
         Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(value = lastName, onValueChange = onLastNameChange, label = { Text("Last Name") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(
+            value = lastName,
+            onValueChange = onLastNameChange,
+            label = { Text("Last Name") },
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color.LightGray,
+                focusedBorderColor = MaterialTheme.colorScheme.primary
+            )
+        )
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
             value = dob,
             onValueChange = onDobChange,
             label = { Text("Date of birth") },
-            placeholder = { Text("dd/mm/yyyy") },
+            placeholder = { Text("yyyy-mm-dd") },
             modifier = Modifier.fillMaxWidth(),
             readOnly = true,
             trailingIcon = {
                 IconButton(onClick = { showDatePicker = true }) {
                     Icon(Icons.Default.DateRange, contentDescription = "Select Date")
                 }
-            }
+            },
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color.LightGray,
+                focusedBorderColor = MaterialTheme.colorScheme.primary
+            )
         )
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -380,10 +422,13 @@ fun BasicDetailsStep(
                     .fillMaxWidth()
                     .menuAnchor(),
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = designationExpanded) },
-                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = Color.LightGray,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary
+                )
             )
             ExposedDropdownMenu(expanded = designationExpanded, onDismissRequest = { designationExpanded = false }) {
-                designationList.forEach { selectionOption -> 
+                designationList.forEach { selectionOption ->
                     DropdownMenuItem(
                         text = { Text(selectionOption) },
                         onClick = {
@@ -407,7 +452,10 @@ fun BasicDetailsStep(
                     .fillMaxWidth()
                     .menuAnchor(),
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = genderExpanded) },
-                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = Color.LightGray,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary
+                )
             )
             ExposedDropdownMenu(expanded = genderExpanded, onDismissRequest = { genderExpanded = false }) {
                 genders.forEach { selectionOption ->
@@ -425,9 +473,12 @@ fun BasicDetailsStep(
         Spacer(modifier = Modifier.height(16.dp))
 
         Card(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onUploadResumeClick() },
             shape = RoundedCornerShape(8.dp),
-            border = BorderStroke(1.dp, Color.LightGray)
+            border = BorderStroke(1.dp, Color.LightGray),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Row(
                 modifier = Modifier
@@ -439,7 +490,12 @@ fun BasicDetailsStep(
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text("Upload Resume", fontWeight = FontWeight.Bold)
-                    Text("upload PDF file or image", fontSize = 12.sp, color = Color.Gray)
+                    val resumeName = resumeUri?.let { getFileName(context.contentResolver, it) }
+                    Text(
+                        text = resumeName ?: "upload PDF file or image",
+                        fontSize = 12.sp,
+                        color = if (resumeName != null) MaterialTheme.colorScheme.primary else Color.Gray
+                    )
                 }
             }
         }
@@ -448,7 +504,7 @@ fun BasicDetailsStep(
     if (showDatePicker) {
         PastDatePicker(
             onDateSelected = {
-                val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+                val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                 onDobChange(sdf.format(Date(it)))
             },
             onDismiss = { showDatePicker = false }
@@ -483,7 +539,11 @@ fun ContactDetailsStep(
                 if (!isPhoneValid && showError) {
                     Text(text = "Invalid phone number")
                 }
-            }
+            },
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color.LightGray,
+                focusedBorderColor = MaterialTheme.colorScheme.primary
+            )
         )
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
@@ -498,7 +558,11 @@ fun ContactDetailsStep(
                 if (!isEmailValid && showError) {
                     Text(text = "Invalid email address")
                 }
-            }
+            },
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color.LightGray,
+                focusedBorderColor = MaterialTheme.colorScheme.primary
+            )
         )
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
@@ -507,7 +571,11 @@ fun ContactDetailsStep(
             label = { Text("Address") },
             placeholder = { Text("Enter Address") },
             modifier = Modifier.fillMaxWidth(),
-            minLines = 3
+            minLines = 3,
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color.LightGray,
+                focusedBorderColor = MaterialTheme.colorScheme.primary
+            )
         )
     }
 }
@@ -521,12 +589,12 @@ fun SalarySchemeStep(
     onTotalSalaryChange: (Float) -> Unit,
     onSave: (List<MonthlyPayment>) -> Unit
 ) {
-    val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale.getDefault()) }
+    val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale("en", "IN")) }
     val sheetState = rememberModalBottomSheetState()
     var showBottomSheet by remember { mutableStateOf(false) }
     var monthlyPayments by remember { mutableStateOf<List<MonthlyPayment>>(emptyList()) }
     val sdf = remember { 
-        val format = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+        val format = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
         format.timeZone = TimeZone.getTimeZone("UTC")
         format
     }
@@ -599,7 +667,10 @@ fun SalarySchemeStep(
         Button(
             onClick = { showBottomSheet = true },
             modifier = Modifier.fillMaxWidth(),
-            enabled = monthlyPayments.size < contractMonths
+            enabled = monthlyPayments.size < contractMonths,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.secondary
+            )
         ) {
             Icon(Icons.Default.Add, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
@@ -640,7 +711,7 @@ fun SalarySchemeStep(
         Spacer(modifier = Modifier.height(16.dp))
 
         if (monthlyPayments.isNotEmpty()) {
-            Button(onClick = { onSave(monthlyPayments) }, modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = { onSave(monthlyPayments) }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)) {
                 Text("Save")
             }
         }
@@ -649,7 +720,8 @@ fun SalarySchemeStep(
     if (showBottomSheet) {
         ModalBottomSheet(
             onDismissRequest = { showBottomSheet = false },
-            sheetState = sheetState
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface
         ) {
             MonthlyPaymentBottomSheetContent(
                 disabledDates = disabledDates,
@@ -671,7 +743,7 @@ fun MonthlyPaymentItem(
     payment: MonthlyPayment,
     onDelete: () -> Unit
 ) {
-    val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale.getDefault()) }
+    val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale("en", "IN")) }
 
     Column {
         Text("Month $month", fontWeight = FontWeight.Bold)
@@ -734,12 +806,17 @@ fun MonthlyPaymentBottomSheetContent(
             onValueChange = { },
             readOnly = true,
             label = { Text("Payment Date") },
+            placeholder = { Text("yyyy-mm-dd") },
             modifier = Modifier.fillMaxWidth(),
             trailingIcon = {
                 IconButton(onClick = { showDatePicker = true }) {
                     Icon(Icons.Default.DateRange, contentDescription = "Select Date")
                 }
-            }
+            },
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color.LightGray,
+                focusedBorderColor = MaterialTheme.colorScheme.primary
+            )
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -749,7 +826,11 @@ fun MonthlyPaymentBottomSheetContent(
             onValueChange = { amountPercentage = it },
             label = { Text("Amount Percentage") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color.LightGray,
+                focusedBorderColor = MaterialTheme.colorScheme.primary
+            )
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -758,7 +839,11 @@ fun MonthlyPaymentBottomSheetContent(
             value = remark,
             onValueChange = { remark = it },
             label = { Text("Remark") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color.LightGray,
+                focusedBorderColor = MaterialTheme.colorScheme.primary
+            )
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -773,7 +858,8 @@ fun MonthlyPaymentBottomSheetContent(
             Spacer(modifier = Modifier.width(8.dp))
             Button(
                 onClick = { onSave(paymentDate, amountPercentage, remark) },
-                enabled = isSaveEnabled
+                enabled = isSaveEnabled,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
             ) {
                 Text("Save")
             }
@@ -783,7 +869,7 @@ fun MonthlyPaymentBottomSheetContent(
     if (showDatePicker) {
         FutureDatePicker(
             onDateSelected = {
-                val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+                val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                 sdf.timeZone = TimeZone.getTimeZone("UTC")
                 paymentDate = sdf.format(Date(it))
             },
@@ -804,7 +890,7 @@ fun PastDatePicker(
         initialSelectedDateMillis = System.currentTimeMillis(),
         selectableDates = object : SelectableDates {
             override fun isSelectableDate(utcTimeMillis: Long): Boolean {
-                // Allow only dates in the past (including today)
+
                 val today = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
                     set(Calendar.HOUR_OF_DAY, 0)
                     set(Calendar.MINUTE, 0)
@@ -865,7 +951,6 @@ fun FutureDatePicker(
                     set(Calendar.SECOND, 0)
                     set(Calendar.MILLISECOND, 0)
                 }.timeInMillis
-                // Allow dates strictly after the minimumDate (which is the latest disabled date's end of day)
                 return utcTimeMillis > minimumDate
             }
         }
@@ -892,7 +977,7 @@ fun FutureDatePicker(
     }
 }
 
-// Helper function to convert Uri to File
+
 fun uriToFile(context: Context, uri: Uri): File? {
     val contentResolver = context.contentResolver
     val fileName = getFileName(contentResolver, uri) ?: return null
@@ -911,7 +996,7 @@ fun uriToFile(context: Context, uri: Uri): File? {
     }
 }
 
-// Helper function to get file name from Uri
+
 private fun getFileName(contentResolver: ContentResolver, uri: Uri): String? {
     var name: String? = null
     val cursor = contentResolver.query(uri, null, null, null, null)
@@ -930,5 +1015,5 @@ private fun getFileName(contentResolver: ContentResolver, uri: Uri): String? {
 @Preview(showBackground = true)
 @Composable
 fun AddEmployeeScreenPreview() {
-    AddEmployeeScreen(onBackPress = {})
+    AddEmployeeScreen(onBackPress = {}, onSaveSuccess = {})
 }

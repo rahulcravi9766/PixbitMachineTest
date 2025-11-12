@@ -1,4 +1,4 @@
-package com.learning.pixbitmachinetest.presentation
+package com.learning.pixbitmachinetest.presentation.state
 
 import com.learning.pixbitmachinetest.data.model.Designation
 

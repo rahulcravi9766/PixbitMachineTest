@@ -2,11 +2,10 @@ package com.learning.pixbitmachinetest.presentation.screens.addEmployee
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.learning.pixbitmachinetest.data.model.Designation
 import com.learning.pixbitmachinetest.data.remote.repository.Repository
-import com.learning.pixbitmachinetest.model.MonthlyPayment
-import com.learning.pixbitmachinetest.presentation.DesignationState
-import com.learning.pixbitmachinetest.presentation.SaveEmployeeState
+import com.learning.pixbitmachinetest.presentation.model.MonthlyPayment
+import com.learning.pixbitmachinetest.presentation.state.DesignationState
+import com.learning.pixbitmachinetest.presentation.state.SaveEmployeeState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -77,11 +76,11 @@ class AddEmployeeViewModel @Inject constructor(
                     mobile = mobile.toRequestBody("text/plain".toMediaTypeOrNull()),
                     email = email.toRequestBody("text/plain".toMediaTypeOrNull()),
                     address = address.toRequestBody("text/plain".toMediaTypeOrNull()),
-                    contractPeriod = contractPeriod.toRequestBody("text/plain".toMediaTypeOrNull()),
+                    contractPeriod = contractPeriod.split(" ").first().toRequestBody("text/plain".toMediaTypeOrNull()),
                     totalSalary = totalSalary.toRequestBody("text/plain".toMediaTypeOrNull()),
                     profilePic = profilePic?.let {
                         MultipartBody.Part.createFormData(
-                            "profile_picture",
+                            "profile_pic",
                             it.name,
                             it.asRequestBody("image/*".toMediaTypeOrNull())
                         )
@@ -95,16 +94,16 @@ class AddEmployeeViewModel @Inject constructor(
                     },
                     monthlyPayments = monthlyPayments.flatMapIndexed { index, payment ->
                         listOf(
-                            MultipartBody.Part.createFormData("monthly_payments[$index][date]", payment.date),
+                            MultipartBody.Part.createFormData("monthly_payments[$index][payment_date]", payment.date),
                             MultipartBody.Part.createFormData("monthly_payments[$index][amount]", payment.amount),
-                            MultipartBody.Part.createFormData("monthly_payments[$index][percentage]", payment.percentage),
-                            MultipartBody.Part.createFormData("monthly_payments[$index][remark]", payment.remark)
+                            MultipartBody.Part.createFormData("monthly_payments[$index][amount_percentage]", payment.percentage),
+                            MultipartBody.Part.createFormData("monthly_payments[$index][remarks]", payment.remark)
                         )
                     }
                 )
 
                 if (response.isSuccessful) {
-                    _saveEmployeeState.value = SaveEmployeeState.Success(response.body() ?: "Success")
+                    _saveEmployeeState.value = SaveEmployeeState.Success(response.body()!!)
                 } else {
                     _saveEmployeeState.value = SaveEmployeeState.Error("An error occurred")
                 }

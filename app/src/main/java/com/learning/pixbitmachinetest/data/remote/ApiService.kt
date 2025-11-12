@@ -1,13 +1,16 @@
 package com.learning.pixbitmachinetest.data.remote
 
 import com.learning.pixbitmachinetest.data.model.Designation
+import com.learning.pixbitmachinetest.data.model.EmployeeListResponse
 import com.learning.pixbitmachinetest.data.model.RegisterResponse
+import com.learning.pixbitmachinetest.data.model.SaveEmployeeResponse
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import retrofit2.Response
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
 import retrofit2.http.GET
+import retrofit2.http.Headers
 import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.Part
@@ -30,9 +33,11 @@ interface ApiService {
         @Field("password") password: String
     ): Response<RegisterResponse>
 
-
+    @GET("employees")
+    suspend fun getEmployees(): Response<EmployeeListResponse>
 
     @Multipart
+    @Headers("Accept: application/json")
     @POST("employees")
     suspend fun saveEmployee(
         @Part("first_name") firstName: RequestBody,
@@ -48,7 +53,7 @@ interface ApiService {
         @Part profilePic: MultipartBody.Part?,
         @Part resume: MultipartBody.Part?,
         @Part monthlyPayments: List<MultipartBody.Part>
-    ): Response<Any>
+    ): Response<SaveEmployeeResponse>
 
 
     @GET("designations")

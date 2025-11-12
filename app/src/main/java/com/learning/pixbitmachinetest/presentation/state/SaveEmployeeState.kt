@@ -1,4 +1,4 @@
-package com.learning.pixbitmachinetest.presentation
+package com.learning.pixbitmachinetest.presentation.state
 
 sealed class SaveEmployeeState {
     object Loading : SaveEmployeeState()

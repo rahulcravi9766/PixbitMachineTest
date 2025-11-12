@@ -11,16 +11,16 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-private val DarkColorScheme = darkColorScheme(
-    primary = primary_dark,
-    secondary = secondary_dark,
-    background = background_dark,
-    surface = surface_dark,
-    onPrimary = onPrimary_dark,
-    onSecondary = onSecondary_dark,
-    onBackground = onBackground_dark,
-    onSurface = onSurface_dark,
-)
+//private val DarkColorScheme = darkColorScheme(
+//    primary = primary_dark,
+//    secondary = secondary_dark,
+//    background = background_dark,
+//    surface = surface_dark,
+//    onPrimary = onPrimary_dark,
+//    onSecondary = onSecondary_dark,
+//    onBackground = onBackground_dark,
+//    onSurface = onSurface_dark,
+//)
 
 private val LightColorScheme = lightColorScheme(
     primary = primary_light,
@@ -35,10 +35,8 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun PixbitMachineTestTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
-    val colorScheme = when {
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
+    val colorScheme = LightColorScheme
+
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
