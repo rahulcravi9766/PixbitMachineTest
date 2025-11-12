@@ -1,4 +1,4 @@
-package com.learning.pixbitmachinetest.presentation
+package com.learning.pixbitmachinetest.presentation.screens
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences

@@ -1,4 +1,4 @@
-package com.learning.pixbitmachinetest
+package com.learning.pixbitmachinetest.presentation.screens
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -7,7 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.runtime.collectAsState
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import com.learning.pixbitmachinetest.presentation.MainViewModel
+import com.learning.pixbitmachinetest.presentation.screens.MainViewModel
 import com.learning.pixbitmachinetest.presentation.navigation.AppNavHost
 import com.learning.pixbitmachinetest.presentation.navigation.Screen
 import com.learning.pixbitmachinetest.presentation.theme.PixbitMachineTestTheme

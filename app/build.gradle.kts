@@ -78,4 +78,7 @@ dependencies {
     implementation(libs.moshi)
     implementation("com.squareup.moshi:moshi-kotlin:1.15.1")
     implementation("com.squareup.okhttp3:logging-interceptor:4.9.3")
+
+    implementation(libs.glide.compose)
+    ksp(libs.glide.compiler)
 }

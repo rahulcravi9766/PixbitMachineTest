@@ -1,8 +1,15 @@
 package com.learning.pixbitmachinetest.presentation.screens.addEmployee
 
+import android.content.ContentResolver
+import android.content.Context
+import android.net.Uri
+import android.provider.OpenableColumns
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,7 +49,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
@@ -52,7 +61,8 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -61,50 +71,86 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
+import com.bumptech.glide.integration.compose.GlideImage
 import com.learning.pixbitmachinetest.common.utils.Validator
+import com.learning.pixbitmachinetest.data.model.Designation
+import com.learning.pixbitmachinetest.presentation.model.MonthlyPayment
+import com.learning.pixbitmachinetest.presentation.state.DesignationState
+import com.learning.pixbitmachinetest.presentation.state.SaveEmployeeState
+import java.io.File
+import java.io.FileOutputStream
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-
-data class MonthlyPayment(
-    val date: String,
-    val amount: String,
-    val percentage: String,
-    val remark: String
-)
+import java.util.TimeZone
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddEmployeeScreen(onBackPress: () -> Unit) {
+fun AddEmployeeScreen(
+    onBackPress: () -> Unit,
+    onSaveSuccess: () -> Unit
+) {
 
+    val viewModel: AddEmployeeViewModel = hiltViewModel()
     var currentStep by remember { mutableIntStateOf(1) }
 
-    // Step 1 fields
     var firstName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
     var dob by remember { mutableStateOf("") }
     var designation by remember { mutableStateOf("") }
     var gender by remember { mutableStateOf("") }
+    var profilePicUri by remember { mutableStateOf<Uri?>(null) }
+    var resumeUri by remember { mutableStateOf<Uri?>(null) }
 
-    // Step 2 fields
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+        onResult = { uri: Uri? -> profilePicUri = uri }
+    )
+
+    val resumePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+        onResult = { uri: Uri? -> resumeUri = uri }
+    )
+
     var mobileNumber by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
 
-    // Step 3 fields
     var contractPeriod by remember { mutableStateOf("3 Months") }
     var totalSalary by remember { mutableFloatStateOf(30000f) }
 
-    var step2ButtonClicked by remember { mutableStateOf(false) }
+    val designationState by viewModel.designationState.collectAsState()
+    val saveEmployeeState by viewModel.saveEmployeeState.collectAsState()
 
+    LaunchedEffect(saveEmployeeState) {
+        if (saveEmployeeState is SaveEmployeeState.Success) {
+            onSaveSuccess()
+        }
+    }
+
+    val designations = remember(designationState) {
+        if (designationState is DesignationState.Success) {
+            (designationState as DesignationState.Success).data
+        } else {
+            emptyList<Designation>()
+        }
+    }
+    val designationNames = remember(designations) {
+        designations.map { it.name }
+    }
 
     val isStep1Valid = remember(firstName, lastName, dob, designation, gender) {
         firstName.isNotBlank() && lastName.isNotBlank() && dob.isNotBlank() && designation.isNotBlank() && gender.isNotBlank()
@@ -114,6 +160,7 @@ fun AddEmployeeScreen(onBackPress: () -> Unit) {
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = { Text("Add an employee") },
@@ -125,7 +172,7 @@ fun AddEmployeeScreen(onBackPress: () -> Unit) {
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    containerColor = MaterialTheme.colorScheme.surface,
                     titleContentColor = MaterialTheme.colorScheme.primary,
                 )
             )
@@ -143,7 +190,7 @@ fun AddEmployeeScreen(onBackPress: () -> Unit) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Row(
                     modifier = Modifier
@@ -167,10 +214,27 @@ fun AddEmployeeScreen(onBackPress: () -> Unit) {
 
             when (currentStep) {
                 1 -> {
-                    BasicDetailsStep(firstName, lastName, dob, designation, gender, onFirstNameChange = { firstName = it }, onLastNameChange = { lastName = it }, onDobChange = { dob = it }, onDesignationChange = { designation = it }, onGenderChange = { gender = it })
+                    BasicDetailsStep(
+                        firstName = firstName,
+                        lastName = lastName,
+                        dob = dob,
+                        designation = designation,
+                        gender = gender,
+                        designationList = designationNames,
+                        onFirstNameChange = { firstName = it },
+                        onLastNameChange = { lastName = it },
+                        onDobChange = { dob = it },
+                        onDesignationChange = { designation = it },
+                        onGenderChange = { gender = it },
+                        profilePicUri = profilePicUri,
+                        onEditProfilePicClick = { imagePickerLauncher.launch("image/*") },
+                        resumeUri = resumeUri,
+                        onUploadResumeClick = { resumePickerLauncher.launch("*/*") }
+                    )
                 }
 
                 2 -> {
+                    var step2ButtonClicked by remember { mutableStateOf(false) }
                     ContactDetailsStep(
                         mobileNumber,
                         email,
@@ -183,11 +247,32 @@ fun AddEmployeeScreen(onBackPress: () -> Unit) {
                 }
 
                 3 -> {
+                    val context = LocalContext.current
                     SalarySchemeStep(
                         contractPeriod,
                         totalSalary,
                         onContractPeriodChange = { contractPeriod = it },
-                        onTotalSalaryChange = { totalSalary = it }
+                        onTotalSalaryChange = { totalSalary = it },
+                        onSave = { monthlyPayments ->
+                            val designationId = designations.find { it.name == designation }?.id
+                            val profilePicFile = profilePicUri?.let { uri -> uriToFile(context, uri) }
+                            val resumeFile = resumeUri?.let { uri -> uriToFile(context, uri) }
+                            viewModel.saveEmployee(
+                                firstName = firstName,
+                                lastName = lastName,
+                                dob = dob,
+                                designation = designationId?.toString() ?: "",
+                                gender = gender,
+                                mobile = mobileNumber,
+                                email = email,
+                                address = address,
+                                contractPeriod = contractPeriod,
+                                totalSalary = totalSalary.toString(),
+                                profilePic = profilePicFile,
+                                resume = resumeFile,
+                                monthlyPayments = monthlyPayments
+                            )
+                        }
                     )
                 }
             }
@@ -203,7 +288,6 @@ fun AddEmployeeScreen(onBackPress: () -> Unit) {
                                 if (isStep1Valid) currentStep++
                             }
                             2 -> {
-                                step2ButtonClicked = true
                                 if (isStep2Valid) currentStep++
                             }
                         }
@@ -211,9 +295,12 @@ fun AddEmployeeScreen(onBackPress: () -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                     enabled = when(currentStep){
                         1 -> isStep1Valid
-                        2 -> true
+                        2 -> isStep2Valid
                         else -> false
-                    }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondary
+                    )
                 ) {
                     Text("Next")
                 }
@@ -222,7 +309,7 @@ fun AddEmployeeScreen(onBackPress: () -> Unit) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalGlideComposeApi::class)
 @Composable
 fun BasicDetailsStep(
     firstName: String,
@@ -230,35 +317,51 @@ fun BasicDetailsStep(
     dob: String,
     designation: String,
     gender: String,
+    designationList: List<String>,
     onFirstNameChange: (String) -> Unit,
     onLastNameChange: (String) -> Unit,
     onDobChange: (String) -> Unit,
     onDesignationChange: (String) -> Unit,
-    onGenderChange: (String) -> Unit
+    onGenderChange: (String) -> Unit,
+    profilePicUri: Uri?,
+    onEditProfilePicClick: () -> Unit,
+    resumeUri: Uri?,
+    onUploadResumeClick: () -> Unit
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
-    val datePickerState = rememberDatePickerState()
 
-    val designations = listOf("Software Engineer", "Project Manager", "Designer", "QA Engineer")
     var designationExpanded by remember { mutableStateOf(false) }
 
     val genders = listOf("Male", "Female", "Other")
     var genderExpanded by remember { mutableStateOf(false) }
 
+    val context = LocalContext.current
+
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
 
         Box(contentAlignment = Alignment.BottomEnd) {
-            Image(
-                imageVector = Icons.Default.Person,
-                contentDescription = "Profile picture",
-                modifier = Modifier
-                    .size(120.dp)
-                    .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
-                    .padding(24.dp),
-                contentScale = ContentScale.Fit
-            )
+            if (profilePicUri != null) {
+                GlideImage(
+                    model = profilePicUri,
+                    contentDescription = "Profile picture",
+                    modifier = Modifier
+                        .size(120.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Image(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = "Profile picture",
+                    modifier = Modifier
+                        .size(120.dp)
+                        .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                        .padding(24.dp),
+                    contentScale = ContentScale.Fit
+                )
+            }
             SmallFloatingActionButton(
-                onClick = {  },
+                onClick = onEditProfilePicClick,
                 shape = CircleShape,
                 containerColor = MaterialTheme.colorScheme.surface
             ) {
@@ -268,22 +371,44 @@ fun BasicDetailsStep(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        OutlinedTextField(value = firstName, onValueChange = onFirstNameChange, label = { Text("First Name") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(
+            value = firstName,
+            onValueChange = onFirstNameChange,
+            label = { Text("First Name") },
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color.LightGray,
+                focusedBorderColor = MaterialTheme.colorScheme.primary
+            )
+        )
         Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(value = lastName, onValueChange = onLastNameChange, label = { Text("Last Name") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(
+            value = lastName,
+            onValueChange = onLastNameChange,
+            label = { Text("Last Name") },
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color.LightGray,
+                focusedBorderColor = MaterialTheme.colorScheme.primary
+            )
+        )
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
             value = dob,
             onValueChange = onDobChange,
             label = { Text("Date of birth") },
-            placeholder = { Text("dd/mm/yyyy") },
+            placeholder = { Text("yyyy-mm-dd") },
             modifier = Modifier.fillMaxWidth(),
             readOnly = true,
             trailingIcon = {
                 IconButton(onClick = { showDatePicker = true }) {
                     Icon(Icons.Default.DateRange, contentDescription = "Select Date")
                 }
-            }
+            },
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color.LightGray,
+                focusedBorderColor = MaterialTheme.colorScheme.primary
+            )
         )
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -297,10 +422,13 @@ fun BasicDetailsStep(
                     .fillMaxWidth()
                     .menuAnchor(),
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = designationExpanded) },
-                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = Color.LightGray,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary
+                )
             )
             ExposedDropdownMenu(expanded = designationExpanded, onDismissRequest = { designationExpanded = false }) {
-                designations.forEach { selectionOption ->
+                designationList.forEach { selectionOption ->
                     DropdownMenuItem(
                         text = { Text(selectionOption) },
                         onClick = {
@@ -324,7 +452,10 @@ fun BasicDetailsStep(
                     .fillMaxWidth()
                     .menuAnchor(),
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = genderExpanded) },
-                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = Color.LightGray,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary
+                )
             )
             ExposedDropdownMenu(expanded = genderExpanded, onDismissRequest = { genderExpanded = false }) {
                 genders.forEach { selectionOption ->
@@ -342,9 +473,12 @@ fun BasicDetailsStep(
         Spacer(modifier = Modifier.height(16.dp))
 
         Card(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onUploadResumeClick() },
             shape = RoundedCornerShape(8.dp),
-            border = BorderStroke(1.dp, Color.LightGray)
+            border = BorderStroke(1.dp, Color.LightGray),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Row(
                 modifier = Modifier
@@ -356,38 +490,25 @@ fun BasicDetailsStep(
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text("Upload Resume", fontWeight = FontWeight.Bold)
-                    Text("upload PDF file or image", fontSize = 12.sp, color = Color.Gray)
+                    val resumeName = resumeUri?.let { getFileName(context.contentResolver, it) }
+                    Text(
+                        text = resumeName ?: "upload PDF file or image",
+                        fontSize = 12.sp,
+                        color = if (resumeName != null) MaterialTheme.colorScheme.primary else Color.Gray
+                    )
                 }
             }
         }
     }
 
     if (showDatePicker) {
-        val confirmEnabled = remember { derivedStateOf { datePickerState.selectedDateMillis != null } }
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showDatePicker = false
-                        datePickerState.selectedDateMillis?.let {
-                            val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-                            onDobChange(sdf.format(Date(it)))
-                        }
-                    },
-                    enabled = confirmEnabled.value
-                ) {
-                    Text("OK")
-                }
+        PastDatePicker(
+            onDateSelected = {
+                val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                onDobChange(sdf.format(Date(it)))
             },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
-                    Text("Cancel")
-                }
-            }
-        ) {
-            DatePicker(state = datePickerState)
-        }
+            onDismiss = { showDatePicker = false }
+        )
     }
 }
 
@@ -418,7 +539,11 @@ fun ContactDetailsStep(
                 if (!isPhoneValid && showError) {
                     Text(text = "Invalid phone number")
                 }
-            }
+            },
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color.LightGray,
+                focusedBorderColor = MaterialTheme.colorScheme.primary
+            )
         )
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
@@ -433,7 +558,11 @@ fun ContactDetailsStep(
                 if (!isEmailValid && showError) {
                     Text(text = "Invalid email address")
                 }
-            }
+            },
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color.LightGray,
+                focusedBorderColor = MaterialTheme.colorScheme.primary
+            )
         )
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
@@ -442,7 +571,11 @@ fun ContactDetailsStep(
             label = { Text("Address") },
             placeholder = { Text("Enter Address") },
             modifier = Modifier.fillMaxWidth(),
-            minLines = 3
+            minLines = 3,
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color.LightGray,
+                focusedBorderColor = MaterialTheme.colorScheme.primary
+            )
         )
     }
 }
@@ -453,12 +586,28 @@ fun SalarySchemeStep(
     contractPeriod: String,
     totalSalary: Float,
     onContractPeriodChange: (String) -> Unit,
-    onTotalSalaryChange: (Float) -> Unit
+    onTotalSalaryChange: (Float) -> Unit,
+    onSave: (List<MonthlyPayment>) -> Unit
 ) {
     val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale("en", "IN")) }
     val sheetState = rememberModalBottomSheetState()
     var showBottomSheet by remember { mutableStateOf(false) }
     var monthlyPayments by remember { mutableStateOf<List<MonthlyPayment>>(emptyList()) }
+    val sdf = remember { 
+        val format = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        format.timeZone = TimeZone.getTimeZone("UTC")
+        format
+    }
+    val disabledDates = remember(monthlyPayments) {
+        monthlyPayments.mapNotNull {
+            try {
+                sdf.parse(it.date)?.time
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
+
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Text("Contract Period", fontWeight = FontWeight.Bold)
@@ -518,7 +667,10 @@ fun SalarySchemeStep(
         Button(
             onClick = { showBottomSheet = true },
             modifier = Modifier.fillMaxWidth(),
-            enabled = monthlyPayments.size < contractMonths
+            enabled = monthlyPayments.size < contractMonths,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.secondary
+            )
         ) {
             Icon(Icons.Default.Add, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
@@ -559,7 +711,7 @@ fun SalarySchemeStep(
         Spacer(modifier = Modifier.height(16.dp))
 
         if (monthlyPayments.isNotEmpty()) {
-            Button(onClick = {  }, modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = { onSave(monthlyPayments) }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)) {
                 Text("Save")
             }
         }
@@ -568,9 +720,11 @@ fun SalarySchemeStep(
     if (showBottomSheet) {
         ModalBottomSheet(
             onDismissRequest = { showBottomSheet = false },
-            sheetState = sheetState
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface
         ) {
             MonthlyPaymentBottomSheetContent(
+                disabledDates = disabledDates,
                 onSave = { date, percentage, remark ->
                     val amount = (totalSalary * percentage.toFloat() / 100).toString()
                     monthlyPayments = monthlyPayments + MonthlyPayment(date, amount, percentage, remark)
@@ -628,6 +782,7 @@ fun MonthlyPaymentItem(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MonthlyPaymentBottomSheetContent(
+    disabledDates: List<Long>,
     onSave: (String, String, String) -> Unit,
     onCancel: () -> Unit
 ) {
@@ -635,7 +790,6 @@ fun MonthlyPaymentBottomSheetContent(
     var amountPercentage by remember { mutableStateOf("") }
     var remark by remember { mutableStateOf("") }
     var showDatePicker by remember { mutableStateOf(false) }
-    val datePickerState = rememberDatePickerState()
 
     val isSaveEnabled = paymentDate.isNotBlank() && amountPercentage.isNotBlank()
 
@@ -652,12 +806,17 @@ fun MonthlyPaymentBottomSheetContent(
             onValueChange = { },
             readOnly = true,
             label = { Text("Payment Date") },
+            placeholder = { Text("yyyy-mm-dd") },
             modifier = Modifier.fillMaxWidth(),
             trailingIcon = {
                 IconButton(onClick = { showDatePicker = true }) {
                     Icon(Icons.Default.DateRange, contentDescription = "Select Date")
                 }
-            }
+            },
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color.LightGray,
+                focusedBorderColor = MaterialTheme.colorScheme.primary
+            )
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -667,7 +826,11 @@ fun MonthlyPaymentBottomSheetContent(
             onValueChange = { amountPercentage = it },
             label = { Text("Amount Percentage") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color.LightGray,
+                focusedBorderColor = MaterialTheme.colorScheme.primary
+            )
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -676,7 +839,11 @@ fun MonthlyPaymentBottomSheetContent(
             value = remark,
             onValueChange = { remark = it },
             label = { Text("Remark") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color.LightGray,
+                focusedBorderColor = MaterialTheme.colorScheme.primary
+            )
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -691,7 +858,8 @@ fun MonthlyPaymentBottomSheetContent(
             Spacer(modifier = Modifier.width(8.dp))
             Button(
                 onClick = { onSave(paymentDate, amountPercentage, remark) },
-                enabled = isSaveEnabled
+                enabled = isSaveEnabled,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
             ) {
                 Text("Save")
             }
@@ -699,36 +867,153 @@ fun MonthlyPaymentBottomSheetContent(
     }
 
     if (showDatePicker) {
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showDatePicker = false
-                        datePickerState.selectedDateMillis?.let {
-                            val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-                            paymentDate = sdf.format(Date(it))
-                        }
-                    },
-                    enabled = datePickerState.selectedDateMillis != null
-                ) {
-                    Text("OK")
-                }
+        FutureDatePicker(
+            onDateSelected = {
+                val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                sdf.timeZone = TimeZone.getTimeZone("UTC")
+                paymentDate = sdf.format(Date(it))
             },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
-                    Text("Cancel")
-                }
-            }
-        ) {
-            DatePicker(
-                state = datePickerState)
-        }
+            onDismiss = { showDatePicker = false },
+            disabledDates = disabledDates
+        )
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PastDatePicker(
+    onDateSelected: (Long) -> Unit,
+    onDismiss: () -> Unit,
+    disabledDates: List<Long> = emptyList()
+) {
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = System.currentTimeMillis(),
+        selectableDates = object : SelectableDates {
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+
+                val today = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }.timeInMillis
+                return utcTimeMillis <= today && utcTimeMillis !in disabledDates
+            }
+        }
+    )
+
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    datePickerState.selectedDateMillis?.let(onDateSelected)
+                    onDismiss()
+                }
+            ) {
+                Text("OK")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    ) {
+        DatePicker(state = datePickerState)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FutureDatePicker(
+    onDateSelected: (Long) -> Unit,
+    onDismiss: () -> Unit,
+    disabledDates: List<Long>
+) {
+    val latestDisabledDate = remember(disabledDates) {
+        val calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+        disabledDates.maxOrNull()?.let {
+            calendar.timeInMillis = it
+            calendar.set(Calendar.HOUR_OF_DAY, 23)
+            calendar.set(Calendar.MINUTE, 59)
+            calendar.set(Calendar.SECOND, 59)
+            calendar.set(Calendar.MILLISECOND, 999)
+            calendar.timeInMillis
+        }
+    }
+
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = (latestDisabledDate ?: System.currentTimeMillis()) + 86400000, // a day after
+        selectableDates = object : SelectableDates {
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                val minimumDate = latestDisabledDate ?: Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }.timeInMillis
+                return utcTimeMillis > minimumDate
+            }
+        }
+    )
+
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    datePickerState.selectedDateMillis?.let(onDateSelected)
+                    onDismiss()
+                },
+                enabled = datePickerState.selectedDateMillis != null
+            ) {
+                Text("OK")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    ) {
+        DatePicker(state = datePickerState)
+    }
+}
+
+
+fun uriToFile(context: Context, uri: Uri): File? {
+    val contentResolver = context.contentResolver
+    val fileName = getFileName(contentResolver, uri) ?: return null
+    val file = File(context.cacheDir, fileName)
+
+    try {
+        contentResolver.openInputStream(uri)?.use { inputStream ->
+            FileOutputStream(file).use { outputStream ->
+                inputStream.copyTo(outputStream)
+            }
+        }
+        return file
+    } catch (e: Exception) {
+        e.printStackTrace()
+        return null
+    }
+}
+
+
+private fun getFileName(contentResolver: ContentResolver, uri: Uri): String? {
+    var name: String? = null
+    val cursor = contentResolver.query(uri, null, null, null, null)
+    cursor?.use {
+        if (it.moveToFirst()) {
+            val nameIndex = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (nameIndex != -1) {
+                name = it.getString(nameIndex)
+            }
+        }
+    }
+    return name
+}
+
 
 @Preview(showBackground = true)
 @Composable
 fun AddEmployeeScreenPreview() {
-    AddEmployeeScreen(onBackPress = {})
+    AddEmployeeScreen(onBackPress = {}, onSaveSuccess = {})
 }

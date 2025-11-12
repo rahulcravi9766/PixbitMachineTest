@@ -16,13 +16,11 @@ class AuthInterceptor @Inject constructor(private val dataStore: DataStore<Prefe
             dataStore.data.first()[Constants.AUTH_TOKEN]
         }
 
-        val originalRequest = chain.request()
-        val requestBuilder = originalRequest.newBuilder()
-
-        if (token != null) {
-            requestBuilder.header("Authorization", "Bearer $token")
+        val request = chain.request().newBuilder()
+        token?.let {
+            request.addHeader("Authorization", "Bearer $it")
         }
 
-        return chain.proceed(requestBuilder.build())
+        return chain.proceed(request.build())
     }
 }

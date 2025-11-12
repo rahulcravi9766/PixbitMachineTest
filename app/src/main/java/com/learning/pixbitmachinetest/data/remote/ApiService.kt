@@ -1,10 +1,19 @@
 package com.learning.pixbitmachinetest.data.remote
 
+import com.learning.pixbitmachinetest.data.model.Designation
+import com.learning.pixbitmachinetest.data.model.EmployeeListResponse
 import com.learning.pixbitmachinetest.data.model.RegisterResponse
+import com.learning.pixbitmachinetest.data.model.SaveEmployeeResponse
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import retrofit2.Response
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
+import retrofit2.http.GET
+import retrofit2.http.Headers
+import retrofit2.http.Multipart
 import retrofit2.http.POST
+import retrofit2.http.Part
 
 interface ApiService {
 
@@ -23,4 +32,30 @@ interface ApiService {
         @Field("email") email: String,
         @Field("password") password: String
     ): Response<RegisterResponse>
+
+    @GET("employees")
+    suspend fun getEmployees(): Response<EmployeeListResponse>
+
+    @Multipart
+    @Headers("Accept: application/json")
+    @POST("employees")
+    suspend fun saveEmployee(
+        @Part("first_name") firstName: RequestBody,
+        @Part("last_name") lastName: RequestBody,
+        @Part("date_of_birth") dob: RequestBody,
+        @Part("designation") designation: RequestBody,
+        @Part("gender") gender: RequestBody,
+        @Part("mobile_number") mobile: RequestBody,
+        @Part("email") email: RequestBody,
+        @Part("address") address: RequestBody,
+        @Part("contract_period") contractPeriod: RequestBody,
+        @Part("total_salary") totalSalary: RequestBody,
+        @Part profilePic: MultipartBody.Part?,
+        @Part resume: MultipartBody.Part?,
+        @Part monthlyPayments: List<MultipartBody.Part>
+    ): Response<SaveEmployeeResponse>
+
+
+    @GET("designations")
+    suspend fun getDesignationsList(): Response<List<Designation>>
 }
