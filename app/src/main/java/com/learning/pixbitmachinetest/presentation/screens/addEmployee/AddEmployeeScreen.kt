@@ -593,7 +593,7 @@ fun SalarySchemeStep(
     val sheetState = rememberModalBottomSheetState()
     var showBottomSheet by remember { mutableStateOf(false) }
     var monthlyPayments by remember { mutableStateOf<List<MonthlyPayment>>(emptyList()) }
-    val sdf = remember { 
+    val sdf = remember {
         val format = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
         format.timeZone = TimeZone.getTimeZone("UTC")
         format
@@ -791,7 +791,10 @@ fun MonthlyPaymentBottomSheetContent(
     var remark by remember { mutableStateOf("") }
     var showDatePicker by remember { mutableStateOf(false) }
 
-    val isSaveEnabled = paymentDate.isNotBlank() && amountPercentage.isNotBlank()
+    val isSaveEnabled = paymentDate.isNotBlank() && amountPercentage.isNotBlank() && remark.isNotBlank()
+
+    var isAmountPercentageError by remember { mutableStateOf(false) }
+
 
     Column(
         modifier = Modifier
@@ -823,10 +826,21 @@ fun MonthlyPaymentBottomSheetContent(
 
         OutlinedTextField(
             value = amountPercentage,
-            onValueChange = { amountPercentage = it },
+            onValueChange = { value ->
+                if (value.isEmpty() || value.toIntOrNull() != null) {
+                    amountPercentage = value
+                    isAmountPercentageError = value.toIntOrNull()?.let { it < 1 || it > 100 } ?: false
+                }
+            },
             label = { Text("Amount Percentage") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth(),
+            isError = isAmountPercentageError,
+            supportingText = {
+                if (isAmountPercentageError) {
+                    Text(text = "Percentage must be between 1 and 100")
+                }
+            },
             colors = OutlinedTextFieldDefaults.colors(
                 unfocusedBorderColor = Color.LightGray,
                 focusedBorderColor = MaterialTheme.colorScheme.primary
@@ -858,7 +872,7 @@ fun MonthlyPaymentBottomSheetContent(
             Spacer(modifier = Modifier.width(8.dp))
             Button(
                 onClick = { onSave(paymentDate, amountPercentage, remark) },
-                enabled = isSaveEnabled,
+                enabled = isSaveEnabled && !isAmountPercentageError,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
             ) {
                 Text("Save")
