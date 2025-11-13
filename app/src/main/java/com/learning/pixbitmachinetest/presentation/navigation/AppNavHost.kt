@@ -61,9 +61,8 @@ fun AppNavHost(
                 navController.popBackStack()
             }, onSaveSuccess = {
                 navController.navigate(Screen.Home.route) {
-                    popUpTo(Screen.AddEmployee.route) {
-                        inclusive = true
-                    }
+                    popUpTo(0) { inclusive = true }
+                    launchSingleTop = true
                 }
             })
         }

@@ -4,8 +4,8 @@ import com.squareup.moshi.Json
 
 data class EmployeeListResponse(
     @Json(name = "data") val data: List<EmployeeListItem>,
-    @Json(name = "links") val links: Links,
-    @Json(name = "meta") val meta: Meta
+    @Json(name = "links") val links: Links?,
+    @Json(name = "meta") val meta: Meta?
 )
 
 data class EmployeeListItem(
@@ -21,8 +21,8 @@ data class EmployeeListItem(
     @Json(name = "designation") val designation: String,
     @Json(name = "mobile_number") val mobileNumber: String,
     @Json(name = "address") val address: String,
-    @Json(name = "contract_period") val contractPeriod: Int,
-    @Json(name = "total_salary") val totalSalary: Int,
+    @Json(name = "contract_period") val contractPeriod: Int?,
+    @Json(name = "total_salary") val totalSalary: Int?,
     @Json(name = "monthly_payments") val monthlyPayments: List<MonthlyPaymentData>,
     @Json(name = "created_at") val createdAt: String
 )
@@ -37,21 +37,21 @@ data class MonthlyPaymentData(
 )
 
 data class Links(
-    @Json(name = "first") val first: String,
-    @Json(name = "last") val last: String,
+    @Json(name = "first") val first: String?,
+    @Json(name = "last") val last: String?,
     @Json(name = "prev") val prev: String?,
     @Json(name = "next") val next: String?
 )
 
 data class Meta(
-    @Json(name = "current_page") val currentPage: Int,
-    @Json(name = "from") val from: Int,
-    @Json(name = "last_page") val lastPage: Int,
-    @Json(name = "links") val links: List<MetaLink>,
-    @Json(name = "path") val path: String,
-    @Json(name = "per_page") val perPage: Int,
-    @Json(name = "to") val to: Int,
-    @Json(name = "total") val total: Int
+    @Json(name = "current_page") val currentPage: Int?,
+    @Json(name = "from") val from: Int?,
+    @Json(name = "last_page") val lastPage: Int?,
+    @Json(name = "links") val links: List<MetaLink>?,
+    @Json(name = "path") val path: String?,
+    @Json(name = "per_page") val perPage: Int?,
+    @Json(name = "to") val to: Int?,
+    @Json(name = "total") val total: Int?
 )
 
 data class MetaLink(

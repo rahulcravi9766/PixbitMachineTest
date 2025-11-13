@@ -85,11 +85,19 @@ fun HomeScreen(navigateToAddEmployee: () -> Unit, navigateToProfile: (Int) -> Un
                 }
                 is EmployeeListState.Success -> {
                     val employees = (employeeListState as EmployeeListState.Success).data.data
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize()
-                    ) {                        items(employees) { employee ->
-                            EmployeeListItem(employee = employee) {
-                                navigateToProfile(employee.id)
+                    if (employees.isNullOrEmpty()) {
+                        Text(
+                            text = "+ Add Employees",
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(employees) { employee ->
+                                EmployeeListItem(employee = employee) {
+                                    navigateToProfile(employee.id)
+                                }
                             }
                         }
                     }
